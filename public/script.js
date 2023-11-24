@@ -14,61 +14,42 @@ const myVideo = document.createElement('video');
 myVideo.muted = true;
 const peers = {};
 
-navigator.mediaDevices.getUserMedia({
-    video:true,
-    audio:true,
 
-}).then( stream=>{
-addVideoStream(myVideo, stream);
-
-myPeer.on('call',call=>{
-call.answer(stream);
-const video = document.createElement('video');
-call.on('stream',userVideoStream=>{
-addVideoStream(video, userVideoStream);
-})
+let myVideoStream; 
 
 
-})
 
 
-// ... (existing code)
+navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(stream => {
+        myVideoStream = stream;
+        addVideoStream(myVideo, stream);
 
-const muteButton = document.getElementById('muteButton');
-const stopVideoButton = document.getElementById('stopVideoButton');
+        myPeer.on('call', call => {
+            call.answer(stream);
+            const video = document.createElement('video');
+            call.on('stream', userVideoStream => {
+                addVideoStream(video, userVideoStream);
+            });
+        });
 
-let isAudioMuted = false;
-let isVideoStopped = false;
-
-muteButton.addEventListener('click', () => {
-    isAudioMuted = !isAudioMuted;
-    const audioTracks = myVideo.srcObject.getAudioTracks();
-    audioTracks.forEach(track => {
-        track.enabled = !isAudioMuted;
+        socket.on('user-connected', userId => {
+            connectToNewUser(userId, stream);
+            if (screenStream) {
+                const call = myPeer.call(userId, screenStream);
+                call.on('stream', userScreenStream => {
+                    addVideoStream(video, userScreenStream);
+                });
+                peers[userId] = call;
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Error accessing media devices:', error);
     });
-    muteButton.innerText = isAudioMuted ? 'Unmute Audio' : 'Mute Audio';
-});
-
-stopVideoButton.addEventListener('click', () => {
-    isVideoStopped = !isVideoStopped;
-    const videoTracks = myVideo.srcObject.getVideoTracks();
-    videoTracks.forEach(track => {
-        track.enabled = !isVideoStopped;
-    });
-    stopVideoButton.innerText = isVideoStopped ? 'Start Video' : 'Stop Video';
-});
-
-// ... (remaining code)
 
 
 
-
-socket.on('user-connected', userId =>{
-    connectToNewUser(userId, stream);
-})
-
-
-})
 
 
 socket.on('user-disconnected', userId =>{
@@ -107,36 +88,31 @@ videoGrid.append(video)
 
 // Existing code...
 
-let screenStream = null; // To store the screen sharing stream
-
-const shareScreenButton = document.getElementById('shareScreenButton');
-
 shareScreenButton.addEventListener('click', async () => {
     try {
         screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
 
-        // Replace the existing stream with the screen sharing stream
-        const videoTracks = myVideo.srcObject.getVideoTracks();
-        if (videoTracks.length > 0) {
-            videoTracks.forEach(track => {
-                track.stop();
-            });
-        }
-
-        myVideo.srcObject = screenStream;
-
-        // Broadcast the screen share to other users
+        // Broadcast screen share to existing users
         for (const peerId in peers) {
             const call = myPeer.call(peerId, screenStream);
             peers[peerId].close();
             peers[peerId] = call;
         }
 
-        // Close the screen sharing when stopped
+        // Replace user's video with the shared screen
+        const videoTracks = myVideo.srcObject.getVideoTracks();
+        if (videoTracks.length > 0) {
+            videoTracks.forEach(track => {
+                track.stop();
+            });
+        }
+        myVideo.srcObject = screenStream;
+
+        // Event listener to stop screen share when ended
         screenStream.getVideoTracks()[0].addEventListener('ended', () => {
-            myVideo.srcObject = stream;
+            myVideo.srcObject = myVideoStream;
             for (const peerId in peers) {
-                const call = myPeer.call(peerId, stream);
+                const call = myPeer.call(peerId, myVideoStream);
                 peers[peerId].close();
                 peers[peerId] = call;
             }
@@ -145,7 +121,6 @@ shareScreenButton.addEventListener('click', async () => {
         console.error('Error sharing screen:', error);
     }
 });
-
 // ... (existing code)
 
 
