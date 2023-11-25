@@ -42,6 +42,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             
           
         });
+        toggleMute(true)
 
         socket.on('user-connected', userId => {
             connectToNewUser(userId, stream);
@@ -186,7 +187,7 @@ stopSharingButton.addEventListener('click', () => {
         socket.emit('reload-page');
 
         // Reload the page after stopping screen sharing (for the local user)
-        window.location.reload();
+       
     }
 });
 
