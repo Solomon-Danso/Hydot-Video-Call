@@ -126,21 +126,64 @@ let myShareStream = null;
 
 shareScreenButton.addEventListener('click', async () => {
     if (!screenStream) {
-        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true,});
+        screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
         myShareStream = screenStream;
-        myShare.srcObject = screenStream;
-        myShare.muted = true; // Mute if necessary
-        
-        // Clear existing shared screen before adding a new one
-        
 
-        addShareStream(myShare, screenStream);
+        // Pause the default video stream
+        myVideoStream.getTracks().forEach(track => track.enabled = false);
 
+        // Replace the default video stream with the shared screen
+        myVideo.srcObject = screenStream;
+        toggleMute(false)
+        // Enable audio when sharing screen
+        screenStream.getAudioTracks().forEach(track => {
+            track.enabled = true;
+        });
+
+        // Remove the 'user-connected' event listener before adding a new one
+        socket.off('user-connected'); // Remove existing listener
         socket.on('user-connected', userId => {
             connectToNewUserStream(userId, screenStream);
         });
     }
 });
+
+
+
+
+
+const stopSharingButton = document.getElementById('stopSharingButton');
+
+
+stopSharingButton.addEventListener('click', () => {
+    if (screenStream) {
+        // Stop screen sharing
+        screenStream.getTracks().forEach(track => track.stop());
+        screenStream = null;
+
+        // Resume the default video stream
+        myVideoStream.getTracks().forEach(track => track.enabled = true);
+        myVideo.srcObject = myVideoStream;
+
+        // Remove the shared screen from the view
+        myShare.srcObject = null;
+        myShareStream = null;
+
+        // Remove shared video element from the shareGrid
+        const sharedVideo = document.querySelector('#share video');
+        if (sharedVideo) {
+            sharedVideo.remove();
+        }
+
+        // Reload the page after stopping screen sharing
+        window.location.reload();
+    }
+});
+
+
+
+
+
 
 // Function to clear the shared screen
 function clearShareScreen() {
@@ -159,59 +202,40 @@ function clearShareScreen() {
 
 
 
-const stopSharingButton = document.getElementById('stopSharingButton');
 
-stopSharingButton.addEventListener('click', () => {
-    if (screenStream) {
-        // Stop screen sharing
-        const tracks = screenStream.getTracks();
-        tracks.forEach(track => track.stop());
 
-        // Remove the shared screen from the view
-        myShare.srcObject = null;
-        myShareStream = null;
-        screenStream = null;
-        
 
-        // You might also want to notify other users that sharing has stopped
-        // For instance, emit an event to the socket server
-        socket.emit('stop-sharing');
 
-        // Remove shared video element from the shareGrid
-        const sharedVideo = document.querySelector('#share video');
-        if (sharedVideo) {
-            sharedVideo.remove();
-        }
-    }
-});
+
+
+
 
 
 const muteButton = document.getElementById('muteButton');
 const unmuteButton = document.getElementById('unmuteButton');
 
 muteButton.addEventListener('click', () => {
-    toggleMute(true); // Mute the video streams
+    toggleMute(true); // Mute the audio streams
 });
 
 unmuteButton.addEventListener('click', () => {
-    toggleMute(false); // Unmute the video streams
+    toggleMute(false); // Unmute the audio streams
 });
 
-// Function to toggle mute/unmute for all video streams
+// Function to toggle mute/unmute for the audio streams
 function toggleMute(isMuted) {
-    // Mute/unmute my video
+    // Mute/unmute my audio
     myVideoStream.getAudioTracks().forEach(track => {
         track.enabled = !isMuted;
     });
 
-    // Mute/unmute shared screen video
+    // Mute/unmute shared screen audio
     if (screenStream) {
         screenStream.getAudioTracks().forEach(track => {
             track.enabled = !isMuted;
         });
     }
 }
-
 
 
 const stopVideoButton = document.getElementById('stopVideoButton');
