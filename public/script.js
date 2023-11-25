@@ -140,6 +140,10 @@ shareScreenButton.addEventListener('click', async () => {
             track.enabled = true;
         });
 
+        for (const userId in peers) {
+            connectToNewUserStream(userId, screenStream);
+        }
+
         // Remove the 'user-connected' event listener before adding a new one
         socket.off('user-connected'); // Remove existing listener
         socket.on('user-connected', userId => {
