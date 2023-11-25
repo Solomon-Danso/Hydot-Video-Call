@@ -153,7 +153,10 @@ shareScreenButton.addEventListener('click', async () => {
 });
 
 
-
+socket.on('reload-page', () => {
+    // Reload the browser when the event is received
+    location.reload(); // This refreshes the page
+});
 
 
 const stopSharingButton = document.getElementById('stopSharingButton');
@@ -179,7 +182,10 @@ stopSharingButton.addEventListener('click', () => {
             sharedVideo.remove();
         }
 
-        // Reload the page after stopping screen sharing
+        // Emit a socket event to trigger a page reload for all connected users
+        socket.emit('reload-page');
+
+        // Reload the page after stopping screen sharing (for the local user)
         window.location.reload();
     }
 });
@@ -189,19 +195,6 @@ stopSharingButton.addEventListener('click', () => {
 
 
 
-// Function to clear the shared screen
-function clearShareScreen() {
-    myShare.srcObject = null;
-    myShareStream = null;
-    screenStream = null;
-
-    // Remove shared video elements from the shareGrid
-    const sharedVideos = document.querySelectorAll('#share video');
-    sharedVideos.forEach(video => {
-        video.srcObject = null;
-        video.remove();
-    });
-}
 
 
 
@@ -267,9 +260,3 @@ function toggleVideo(isVideoAllowed) {
         });
     }
 }
-
-
-
-
-
-

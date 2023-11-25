@@ -23,6 +23,11 @@ io.on("connection", socket =>{
             socket.to(roomId).emit('user-disconnected',userId)
         })
 
+        socket.on('reload-page', () => {
+            // Emit the 'reload-page' event to all connected clients in the room
+            io.to(roomId).emit('reload-page');
+        });
+
     })
 
 })
@@ -32,7 +37,3 @@ io.on("connection", socket =>{
 
 
 server.listen(4000)
-
-
-
-
