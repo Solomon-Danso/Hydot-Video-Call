@@ -185,6 +185,7 @@ stopSharingButton.addEventListener('click', () => {
 
         // Emit a socket event to trigger a page reload for all connected users
         socket.emit('reload-page');
+        window.location.reload();
 
         // Reload the page after stopping screen sharing (for the local user)
        
